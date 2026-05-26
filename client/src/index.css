@@ -1,0 +1,166 @@
+/* index.css — global styles for DSA Battle */
+/* Keeping it minimal today. Day 11 is the polish day. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f0f1a;
+  color: #e8e8f0;
+  min-height: 100vh;
+}
+
+/* Every screen is a centered column */
+.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.screen h1 { font-size: 1.8rem; text-align: center; color: #a78bfa; }
+.subtitle   { text-align: center; color: #94a3b8; }
+
+/* Cards */
+.card {
+  background: #1e1e2e;
+  border: 1px solid #2e2e3e;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* Inputs */
+.input, .select {
+  background: #0f0f1a;
+  border: 1px solid #3b3b4f;
+  border-radius: 8px;
+  color: #e8e8f0;
+  padding: 10px 14px;
+  font-size: 1rem;
+  width: 100%;
+}
+.input:focus, .select:focus {
+  outline: none;
+  border-color: #a78bfa;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-primary:hover { background: #6d28d9; }
+
+.btn-secondary {
+  background: transparent;
+  color: #a78bfa;
+  border: 1px solid #a78bfa;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-secondary:hover { background: #1e1e2e; }
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+}
+.btn-ghost:hover { color: #a78bfa; }
+
+.btn-big { padding: 16px; font-size: 1.1rem; }
+
+.button-group { display: flex; flex-direction: column; gap: 10px; }
+
+.error { color: #f87171; font-size: 0.85rem; }
+.hint  { color: #6b7280; font-size: 0.85rem; text-align: center; }
+
+/* Room code */
+.room-code-row { display: flex; align-items: center; gap: 12px; }
+.room-code {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #a78bfa;
+  font-family: monospace;
+}
+
+/* Players */
+.player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #2e2e3e;
+}
+.player-row:last-child { border-bottom: none; }
+
+.badge {
+  background: #2e2e3e;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+.badge.host { background: #4c1d95; color: #c4b5fd; }
+
+/* Problem card */
+.problem-title { font-size: 1.1rem; font-weight: 600; }
+.problem-meta  { color: #6b7280; font-size: 0.85rem; }
+.problem-link  { color: #818cf8; font-size: 0.9rem; }
+
+/* Selector row */
+.selector-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.selector-row .select { width: auto; flex: 1; }
+
+/* Battle screen timer */
+.timer-card { text-align: center; }
+.timer { font-size: 3rem; font-weight: 700; font-family: monospace; color: #34d399; }
+
+/* Status labels */
+.status-solved  { color: #34d399; font-size: 0.85rem; }
+.status-solving { color: #94a3b8; font-size: 0.85rem; }
+
+/* Leaderboard */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #2e2e3e;
+}
+.leaderboard-row:last-child { border-bottom: none; }
+.leaderboard-row.highlight  { background: #1a1a2e; border-radius: 8px; padding: 10px; }
+
+.rank        { font-size: 1.3rem; width: 36px; }
+.player-name { flex: 1; }
+.points      { font-weight: 700; color: #a78bfa; }
