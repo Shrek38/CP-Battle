@@ -6,6 +6,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+const API_BASE = 'http://localhost:5000'
+
 // Dummy problems — Day 4 replaces this with real API calls
 const DUMMY_PROBLEMS = [
   { title: 'Two Sum',              link: 'https://leetcode.com/problems/two-sum',               difficulty: 'Easy',   platform: 'LeetCode'   },
@@ -23,14 +25,42 @@ function LobbyScreen({ state, actions }) {
 
   const [platform,   setPlatform]   = useState('LeetCode')
   const [difficulty, setDifficulty] = useState('Easy')
+  const [minRating,  setMinRating]  = useState('800')
+  const [maxRating,  setMaxRating]  = useState('1200')
   const [copied,     setCopied]     = useState(false)
 
-  function handleSearchAgain() {
-    // Filter dummy problems by platform, pick a random one
-    // Day 4 replaces this with a real API call to your backend
-    const filtered = DUMMY_PROBLEMS.filter(p => p.platform === platform)
-    const random = filtered[Math.floor(Math.random() * filtered.length)]
-    setProblem(random)
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+
+  async function handleSearchAgain() {
+    setLoading(true)
+    setFetchError('')
+
+    try {
+      let params = ''
+
+      if (platform === 'Codeforces') {
+        params = `platform=Codeforces&minRating=${minRating}&maxRating=${maxRating}`
+      } else {
+        // LeetCode and GeeksforGeeks use difficulty
+        params = `platform=${platform}&difficulty=${difficulty}`
+      }
+
+      const response = await fetch(`${API_BASE}/api/problem/random?${params}`)
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Failed to fetch problem')
+      }
+
+      const data = await response.json()
+      actions.setProblem(data.problem)
+
+    } catch (err) {
+      setFetchError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleCopyCode() {
@@ -87,25 +117,54 @@ function LobbyScreen({ state, actions }) {
             >
               <option>LeetCode</option>
               <option>Codeforces</option>
+              <option>GeeksforGeeks</option>
             </select>
 
-            {/* Difficulty selector — changes options based on platform */}
-            <select
-              className="select"
-              value={difficulty}
-              onChange={e => setDifficulty(e.target.value)}
+      {/* Difficulty selector — changes options based on platform */}
+      {/* Difficulty / Rating selector — changes based on platform */}
+      {platform === 'Codeforces' ? (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select
+            className="select"
+            value={minRating}
+            onChange={e => setMinRating(e.target.value)}
+          >
+            {['800','900','1000','1100','1200','1300','1400','1500'].map(r =>
+              <option key={r}>{r}</option>
+            )}
+          </select>
+          <span style={{ color: '#6b7280' }}>to</span>
+          <select
+            className="select"
+            value={maxRating}
+            onChange={e => setMaxRating(e.target.value)}
+          >
+            {['900','1000','1100','1200','1300','1400','1500','1600'].map(r =>
+              <option key={r}>{r}</option>
+            )}
+          </select>
+        </div>
+      ) : (
+        <select
+          className="select"
+          value={difficulty}
+          onChange={e => setDifficulty(e.target.value)}
+        >
+          {['Easy', 'Medium', 'Hard'].map(d =>
+            <option key={d}>{d}</option>
+          )}
+        </select>
+      )}
+
+            <button
+              className="btn-ghost"
+              onClick={handleSearchAgain}
+              disabled={loading}
             >
-              {platform === 'LeetCode'
-                ? ['Easy', 'Medium', 'Hard'].map(d =>
-                    <option key={d}>{d}</option>)
-                : ['800', '900', '1000', '1100', '1200'].map(r =>
-                    <option key={r}>{r}</option>)
-              }
-            </select>
-
-            <button className="btn-ghost" onClick={handleSearchAgain}>
-              🔄 Search Again
+              {loading ? '⏳ Fetching...' : '🔄 Search Again'}
             </button>
+
+            {fetchError && <p className="error">{fetchError}</p>}
           </div>
         )}
 
