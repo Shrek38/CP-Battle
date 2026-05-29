@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-
+import { socket } from './socket'
 import HomeScreen   from './pages/HomeScreen'
 import LobbyScreen  from './pages/LobbyScreen'
 import BattleScreen from './pages/BattleScreen'
@@ -13,10 +13,11 @@ function App() {
   // Because when React Router swaps screens, the old screen's component
   // is UNMOUNTED — its local state is destroyed. Keeping it here in App
   // means it survives navigation.
-
+  
   const [username, setUsername] = useState('')       // e.g. "alice123"
   const [roomCode, setRoomCode] = useState('')       // e.g. "XYZ123"
   const [isHost, setIsHost]     = useState(false)    // did this user create the room?
+  const [socketConnected, setSocketConnected] = useState(false)
 
   // Dummy problem — Day 4 will replace this with real API data
   const [problem, setProblem] = useState({
@@ -47,10 +48,29 @@ function App() {
     if (username) localStorage.setItem('dsa_battle_username', username)
   }, [username])
 
+  useEffect(() => {
+  // Connect when app loads
+    socket.connect()
+
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id)
+      setSocketConnected(true)
+    })
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected')
+      setSocketConnected(false)
+    })
+
+    // Cleanup when App unmounts (rare but correct practice)
+    return () => {
+      socket.disconnect()
+    }
+  }, [])
   // ── Bundle everything screens might need ─────────────────────────────────
   // Instead of passing 10 props to every screen, we pass one "appState" object
   // and one "appActions" object. Keeps things organised.
-  const appState = { username, roomCode, isHost, problem, players, leaderboard }
+  const appState = { username, roomCode, isHost, problem, players, leaderboard, socketConnected }
 
   const appActions = {
     setUsername,

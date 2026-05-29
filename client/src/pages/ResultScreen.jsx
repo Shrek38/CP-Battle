@@ -1,33 +1,28 @@
 // pages/ResultScreen.jsx
-// Shows the leaderboard after a round ends.
-// Host can start next round or end the session.
-
 import { useNavigate } from 'react-router-dom'
+import { socket } from '../socket'
 
-// Medal emojis for top 3
 const MEDALS = ['🥇', '🥈', '🥉']
 
 function ResultScreen({ state, actions }) {
-  const { leaderboard, isHost, username } = state
-  const { setPlayers, setProblem } = actions
+  const { leaderboard, isHost, username, roomCode } = state
+  const { setPlayers, setLeaderboard } = actions
 
   const navigate = useNavigate()
 
-  function handleNextRound() {
-    // Reset player statuses but KEEP cumulative points
-    actions.setPlayers(prev =>
-      prev.map(p => ({ ...p, status: 'Solving...' }))
-    )
-    // Navigate back to lobby to pick a new problem
+  // Listen for next round — guests navigate when host triggers it
+  socket.off('next_round_started')
+  socket.on('next_round_started', () => {
     navigate('/lobby')
+  })
+
+  function handleNextRound() {
+    socket.emit('next_round', { roomCode })
   }
 
   function handleEndSession() {
-    // Full reset — back to home
-    actions.setPlayers(prev =>
-      prev.map(p => ({ ...p, points: 0, status: 'Solving...' }))
-    )
-    actions.setLeaderboard([])
+    setPlayers(prev => prev.map(p => ({ ...p, points: 0, status: 'Waiting' })))
+    setLeaderboard([])
     navigate('/')
   }
 
@@ -35,45 +30,34 @@ function ResultScreen({ state, actions }) {
     <div className="screen">
       <h1>🏆 Results</h1>
 
-      {leaderboard.length === 0
-        ? <p>No results yet.</p>
-        : (
-          <div className="card">
-            <p className="label">LEADERBOARD</p>
-            {leaderboard.map((player, index) => (
-              <div
-                key={player.id}
-                className={`leaderboard-row ${player.name === username ? 'highlight' : ''}`}
-              >
-                <span className="rank">
-                  {MEDALS[index] ?? `#${index + 1}`}
-                </span>
-                <span className="player-name">
-                  {player.name}
-                  {player.name === username && ' (You)'}
-                </span>
-                <span className="points">{player.points} pts</span>
-              </div>
-            ))}
-          </div>
-        )
-      }
+      {leaderboard.length === 0 ? (
+        <p>No results yet.</p>
+      ) : (
+        <div className="card">
+          <p className="label">LEADERBOARD</p>
+          {leaderboard.map((player, index) => (
+            <div
+              key={player.id}
+              className={`leaderboard-row ${player.name === username ? 'highlight' : ''}`}
+            >
+              <span className="rank">{MEDALS[index] ?? `#${index + 1}`}</span>
+              <span className="player-name">
+                {player.name}{player.name === username && ' (You)'}
+              </span>
+              <span className="points">{player.points} pts</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Host controls */}
-      {isHost
-        ? (
-          <div className="button-group">
-            <button className="btn-primary" onClick={handleNextRound}>
-              ▶ Next Round
-            </button>
-            <button className="btn-secondary" onClick={handleEndSession}>
-              End Session
-            </button>
-          </div>
-        ) : (
-          <p className="hint">Waiting for host to start next round...</p>
-        )
-      }
+      {isHost ? (
+        <div className="button-group">
+          <button className="btn-primary" onClick={handleNextRound}>▶ Next Round</button>
+          <button className="btn-secondary" onClick={handleEndSession}>End Session</button>
+        </div>
+      ) : (
+        <p className="hint">Waiting for host to start next round...</p>
+      )}
     </div>
   )
 }

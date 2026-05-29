@@ -1,29 +1,54 @@
 // pages/HomeScreen.jsx
-// First screen the user sees.
-// Responsibilities:
-//   1. Ask for username if not set yet
-//   2. Let user create or join a room
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { socket } from '../socket'
 
 function HomeScreen({ state, actions }) {
-  const { username } = state
-  const { setUsername, setRoomCode, setIsHost } = actions
+  const { username, socketConnected } = state
+  const { setUsername, setRoomCode, setIsHost, setPlayers } = actions
 
-  // useNavigate() gives you a function to programmatically change the URL
-  // e.g. navigate('/lobby') is like clicking a link to /lobby
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const [nameInput, setNameInput] = useState(username || '')
+  const [joinInput, setJoinInput] = useState('')
+  const [nameSet,   setNameSet]   = useState(!!username)
+  const [error,     setError]     = useState('')
+  const [loading,   setLoading]   = useState(false)
 
-  // Local state — only this screen needs these, so they live here
-  const [nameInput, setNameInput]   = useState(username || '')
-  const [joinInput, setJoinInput]   = useState('')
-  const [nameSet, setNameSet]       = useState(!!username)  // !! converts to boolean
-  const [error, setError]           = useState('')
+  useEffect(() => {
+    // Listen for successful room creation
+    socket.on('room_created', ({ roomCode }) => {
+      setRoomCode(roomCode)
+      setIsHost(true)
+      setLoading(false)
+      navigate('/lobby')
+    })
+
+    // Listen for successful room join
+    socket.on('room_joined', ({ roomCode }) => {
+      setRoomCode(roomCode)
+      setIsHost(false)
+      setLoading(false)
+      navigate('/lobby')
+    })
+
+    // Listen for errors (wrong room code, locked room, etc.)
+    socket.on('room_error', ({ message }) => {
+      setError(message)
+      setLoading(false)
+    })
+
+    // Cleanup: remove listeners when component unmounts
+    // This prevents duplicate listeners if user navigates back to home
+    return () => {
+      socket.off('room_created')
+      socket.off('room_joined')
+      socket.off('room_error')
+    }
+  }, [])
 
   function handleSetName() {
     const trimmed = nameInput.trim()
-    if (!trimmed) return setError('Username cannot be empty')
+    if (!trimmed)           return setError('Username cannot be empty')
     if (trimmed.length < 3) return setError('At least 3 characters please')
     if (trimmed.length > 15) return setError('Max 15 characters')
     setUsername(trimmed)
@@ -32,24 +57,21 @@ function HomeScreen({ state, actions }) {
   }
 
   function handleCreateRoom() {
-    // Generate a random 6-character room code
-    // Day 5 will replace this with a server-generated code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase()
-    setRoomCode(code)
-    setIsHost(true)
-    navigate('/lobby')
+    setLoading(true)
+    setError('')
+    // Emit to server — server generates the room code and responds with room_created
+    socket.emit('create_room', { username })
   }
 
   function handleJoinRoom() {
     const trimmed = joinInput.trim().toUpperCase()
-    if (!trimmed) return setError('Enter a room code')
+    if (!trimmed)            return setError('Enter a room code')
     if (trimmed.length !== 6) return setError('Room code must be 6 characters')
-    setRoomCode(trimmed)
-    setIsHost(false)
-    navigate('/lobby')
+    setLoading(true)
+    setError('')
+    socket.emit('join_room', { username, roomCode: trimmed })
   }
 
-  // ── If username not set yet, show name entry form ────────────────────────
   if (!nameSet) {
     return (
       <div className="screen">
@@ -62,7 +84,6 @@ function HomeScreen({ state, actions }) {
             placeholder="e.g. coder42"
             value={nameInput}
             onChange={e => setNameInput(e.target.value)}
-            // Let user press Enter instead of clicking button
             onKeyDown={e => e.key === 'Enter' && handleSetName()}
             maxLength={15}
           />
@@ -75,17 +96,28 @@ function HomeScreen({ state, actions }) {
     )
   }
 
-  // ── Main home screen after username is set ───────────────────────────────
   return (
     <div className="screen">
       <h1>⚔️ DSA Battle</h1>
       <p className="subtitle">Welcome, <strong>{username}</strong></p>
 
+      {/* Connection status indicator */}
+      <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>
+        {socketConnected
+          ? <span style={{ color: '#34d399' }}>● Connected</span>
+          : <span style={{ color: '#f87171' }}>● Connecting...</span>
+        }
+      </p>
+
       <div className="card">
         <h2>Create a Room</h2>
         <p>You'll be the host and pick the problem</p>
-        <button className="btn-primary" onClick={handleCreateRoom}>
-          + Create Room
+        <button
+          className="btn-primary"
+          onClick={handleCreateRoom}
+          disabled={loading || !socketConnected}
+        >
+          {loading ? '⏳ Creating...' : '+ Create Room'}
         </button>
       </div>
 
@@ -100,16 +132,16 @@ function HomeScreen({ state, actions }) {
           maxLength={6}
         />
         {error && <p className="error">{error}</p>}
-        <button className="btn-secondary" onClick={handleJoinRoom}>
-          Join Room →
+        <button
+          className="btn-secondary"
+          onClick={handleJoinRoom}
+          disabled={loading || !socketConnected}
+        >
+          {loading ? '⏳ Joining...' : 'Join Room →'}
         </button>
       </div>
 
-      {/* Small affordance to change username */}
-      <button
-        className="btn-ghost"
-        onClick={() => { setNameSet(false); setError('') }}
-      >
+      <button className="btn-ghost" onClick={() => { setNameSet(false); setError('') }}>
         Change username
       </button>
     </div>

@@ -1,25 +1,13 @@
 // pages/LobbyScreen.jsx
-// Two modes depending on isHost:
-//   Host:  sees problem selector, Search Again, Start Battle
-//   Guest: sees problem details, waits for host
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { socket } from '../socket'
 
 const API_BASE = 'http://localhost:5000'
 
-// Dummy problems — Day 4 replaces this with real API calls
-const DUMMY_PROBLEMS = [
-  { title: 'Two Sum',              link: 'https://leetcode.com/problems/two-sum',               difficulty: 'Easy',   platform: 'LeetCode'   },
-  { title: 'Best Time to Buy',     link: 'https://leetcode.com/problems/best-time-to-buy-and-sell-stock', difficulty: 'Easy', platform: 'LeetCode' },
-  { title: 'Merge Intervals',      link: 'https://leetcode.com/problems/merge-intervals',        difficulty: 'Medium', platform: 'LeetCode'   },
-  { title: 'Div2 A - Watermelon',  link: 'https://codeforces.com/problemset/problem/4/A',        difficulty: '800',    platform: 'Codeforces' },
-  { title: 'Div2 B - Queue',       link: 'https://codeforces.com/problemset/problem/141/C',      difficulty: '1200',   platform: 'Codeforces' },
-]
-
 function LobbyScreen({ state, actions }) {
   const { username, roomCode, isHost, problem, players } = state
-  const { setProblem } = actions
+  const { setProblem, setPlayers } = actions
 
   const navigate = useNavigate()
 
@@ -28,33 +16,55 @@ function LobbyScreen({ state, actions }) {
   const [minRating,  setMinRating]  = useState('800')
   const [maxRating,  setMaxRating]  = useState('1200')
   const [copied,     setCopied]     = useState(false)
-
-  const [loading, setLoading] = useState(false)
+  const [loading,    setLoading]    = useState(false)
   const [fetchError, setFetchError] = useState('')
+
+  useEffect(() => {
+    // Server broadcasts this whenever room state changes
+    // (new player joins, problem updates, etc.)
+    socket.on('room_update', ({ players, problem, hostName, locked }) => {
+      setPlayers(players)
+      if (problem) setProblem(problem)
+    })
+
+    // Host clicked Start Battle — everyone navigates to /battle
+    socket.on('battle_started', ({ problem, players }) => {
+      setProblem(problem)
+      setPlayers(players)
+      navigate('/battle')
+    })
+
+    // Host disconnected
+    socket.on('room_closed', ({ message }) => {
+      alert(message)
+      navigate('/')
+    })
+
+    return () => {
+      socket.off('room_update')
+      socket.off('battle_started')
+      socket.off('room_closed')
+    }
+  }, [])
 
   async function handleSearchAgain() {
     setLoading(true)
     setFetchError('')
-
     try {
-      let params = ''
-
-      if (platform === 'Codeforces') {
-        params = `platform=Codeforces&minRating=${minRating}&maxRating=${maxRating}`
-      } else {
-        // LeetCode and GeeksforGeeks use difficulty
-        params = `platform=${platform}&difficulty=${difficulty}`
-      }
+      const params = platform === 'Codeforces'
+        ? `platform=Codeforces&minRating=${minRating}&maxRating=${maxRating}`
+        : `platform=${platform}&difficulty=${difficulty}`
 
       const response = await fetch(`${API_BASE}/api/problem/random?${params}`)
-
       if (!response.ok) {
         const err = await response.json()
         throw new Error(err.error || 'Failed to fetch problem')
       }
-
       const data = await response.json()
-      actions.setProblem(data.problem)
+      setProblem(data.problem)
+
+      // Sync the new problem to all guests via socket
+      socket.emit('update_problem', { roomCode, problem: data.problem })
 
     } catch (err) {
       setFetchError(err.message)
@@ -66,20 +76,18 @@ function LobbyScreen({ state, actions }) {
   function handleCopyCode() {
     navigator.clipboard.writeText(roomCode)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)  // reset after 2 seconds
+    setTimeout(() => setCopied(false), 2000)
   }
 
   function handleStartBattle() {
-    // Day 5: this will emit a Socket.io event to the server
-    // For now, just navigate
-    navigate('/battle')
+    if (!problem) return setFetchError('Please fetch a problem first!')
+    socket.emit('start_battle', { roomCode })
   }
 
   return (
     <div className="screen">
       <h1>⚔️ DSA Battle</h1>
 
-      {/* Room code display */}
       <div className="card">
         <p className="label">ROOM CODE</p>
         <div className="room-code-row">
@@ -91,110 +99,84 @@ function LobbyScreen({ state, actions }) {
         <p className="hint">Share this code with friends to join</p>
       </div>
 
-      {/* Players in room */}
+      {/* Live player list — updates in real time */}
       <div className="card">
         <p className="label">PLAYERS ({players.length})</p>
         {players.map(p => (
           <div key={p.id} className="player-row">
             <span>{p.name}</span>
-            {p.name === username && <span className="badge">You</span>}
-            {isHost && p.name === username && <span className="badge host">Host</span>}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {p.name === username && <span className="badge">You</span>}
+              {p.name === username && isHost && <span className="badge host">Host</span>}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Problem section — host can configure, guest just sees */}
       <div className="card">
         <p className="label">PROBLEM</p>
 
         {isHost && (
-          <div className="selector-row">
-            {/* Platform selector */}
-            <select
-              className="select"
-              value={platform}
-              onChange={e => setPlatform(e.target.value)}
-            >
-              <option>LeetCode</option>
-              <option>Codeforces</option>
-              <option>GeeksforGeeks</option>
-            </select>
+          <>
+            <div className="selector-row">
+              <select className="select" value={platform}
+                onChange={e => setPlatform(e.target.value)}>
+                <option>LeetCode</option>
+                <option>Codeforces</option>
+                <option>GeeksforGeeks</option>
+              </select>
 
-      {/* Difficulty selector — changes options based on platform */}
-      {/* Difficulty / Rating selector — changes based on platform */}
-      {platform === 'Codeforces' ? (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <select
-            className="select"
-            value={minRating}
-            onChange={e => setMinRating(e.target.value)}
-          >
-            {['800','900','1000','1100','1200','1300','1400','1500'].map(r =>
-              <option key={r}>{r}</option>
-            )}
-          </select>
-          <span style={{ color: '#6b7280' }}>to</span>
-          <select
-            className="select"
-            value={maxRating}
-            onChange={e => setMaxRating(e.target.value)}
-          >
-            {['900','1000','1100','1200','1300','1400','1500','1600'].map(r =>
-              <option key={r}>{r}</option>
-            )}
-          </select>
-        </div>
-      ) : (
-        <select
-          className="select"
-          value={difficulty}
-          onChange={e => setDifficulty(e.target.value)}
-        >
-          {['Easy', 'Medium', 'Hard'].map(d =>
-            <option key={d}>{d}</option>
-          )}
-        </select>
-      )}
+              {platform === 'Codeforces' ? (
+                <>
+                  <select className="select" value={minRating}
+                    onChange={e => setMinRating(e.target.value)}>
+                    {['800','900','1000','1100','1200','1300','1400','1500'].map(r =>
+                      <option key={r}>{r}</option>)}
+                  </select>
+                  <span style={{ color: '#6b7280' }}>to</span>
+                  <select className="select" value={maxRating}
+                    onChange={e => setMaxRating(e.target.value)}>
+                    {['900','1000','1100','1200','1300','1400','1500','1600'].map(r =>
+                      <option key={r}>{r}</option>)}
+                  </select>
+                </>
+              ) : (
+                <select className="select" value={difficulty}
+                  onChange={e => setDifficulty(e.target.value)}>
+                  {['Easy','Medium','Hard'].map(d => <option key={d}>{d}</option>)}
+                </select>
+              )}
+            </div>
 
-            <button
-              className="btn-ghost"
-              onClick={handleSearchAgain}
-              disabled={loading}
-            >
+            <button className="btn-ghost" onClick={handleSearchAgain} disabled={loading}>
               {loading ? '⏳ Fetching...' : '🔄 Search Again'}
             </button>
-
             {fetchError && <p className="error">{fetchError}</p>}
-          </div>
+          </>
         )}
 
-        {/* Problem details — both host and guest see this */}
-        <div className="problem-card">
-          <p className="problem-title">{problem.title}</p>
-          <p className="problem-meta">
-            {problem.platform} · {problem.difficulty}
+        {problem ? (
+          <div className="problem-card">
+            <p className="problem-title">{problem.title}</p>
+            <p className="problem-meta">{problem.platform} · {problem.difficulty}</p>
+            <a href={problem.link} target="_blank" rel="noreferrer" className="problem-link">
+              View Problem ↗
+            </a>
+          </div>
+        ) : (
+          <p className="hint">
+            {isHost ? 'Click Search Again to pick a problem' : 'Waiting for host to pick a problem...'}
           </p>
-          
-            href={problem.link}
-            target="_blank"
-            rel="noreferrer"
-            className="problem-link"
-          <a>
-            View Problem ↗
-          </a>
-        </div>
+        )}
       </div>
 
-      {/* Only host sees Start Battle */}
-      {isHost
-        ? (
-          <button className="btn-primary" onClick={handleStartBattle}>
-            ⚔️ Start Battle
-          </button>
-        ) : (
-          <p className="hint">Waiting for host to start the battle...</p>
-        )
-      }
+      {isHost ? (
+        <button className="btn-primary" onClick={handleStartBattle} disabled={!problem}>
+          ⚔️ Start Battle
+        </button>
+      ) : (
+        <p className="hint">Waiting for host to start the battle...</p>
+      )}
     </div>
   )
 }
