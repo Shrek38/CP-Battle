@@ -6,6 +6,7 @@ const express  = require('express')
 const router   = express.Router()
 const fetch    = require('node-fetch')
 const GFG_PROBLEMS = require('../data/gfg_problems')
+const LC_FALLBACK = require('../data/leetcode_fallback')
 
 // ── In-memory cache ───────────────────────────────────────────────────────────
 // Codeforces returns ~9000 problems in one big response (~2MB).
@@ -83,37 +84,36 @@ async function getCodeforcesProblems(minRating, maxRating) {
 
 // ── LeetCode fetcher ──────────────────────────────────────────────────────────
 async function getLeetCodeProblem(difficulty) {
-  // difficulty must be uppercase for this API: EASY / MEDIUM / HARD
   const diffUpper = difficulty.toUpperCase()
-
-  // This free wrapper API returns random LeetCode problems
-  // Docs: https://github.com/alfaarghya/alfa-leetcode-api
   const url = `https://alfa-leetcode-api.onrender.com/problems?limit=50&difficulty=${diffUpper}`
-
   console.log(`LC: fetching difficulty=${diffUpper}`)
 
-  const response = await fetch(url)
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
 
-  if (!response.ok) {
-    throw new Error(`LeetCode API returned ${response.status}`)
-  }
+    const response = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeout)
 
-  const data = await response.json()
+    if (!response.ok) throw new Error(`LeetCode API returned ${response.status}`)
 
-  // The wrapper returns { problemsetQuestionList: [...] }
-  const problems = data.problemsetQuestionList
+    const data = await response.json()
+    const problems = data.problemsetQuestionList
 
-  if (!problems || problems.length === 0) {
-    throw new Error('LeetCode API returned no problems')
-  }
+    if (!problems || problems.length === 0) throw new Error('LeetCode API returned no problems')
 
-  const raw = pickRandom(problems)
-
-  return {
-    title:      raw.title,
-    link:       `https://leetcode.com/problems/${raw.titleSlug}`,
-    difficulty: raw.difficulty,   // 'Easy' | 'Medium' | 'Hard'
-    platform:   'LeetCode',
+    const raw = pickRandom(problems)
+    return {
+      title: raw.title,
+      link: `https://leetcode.com/problems/${raw.titleSlug}`,
+      difficulty: raw.difficulty,
+      platform: 'LeetCode',
+    }
+  } catch (err) {
+    console.warn(`LC API failed (${err.message}), using fallback problems`)
+    const pool = LC_FALLBACK.filter(p => p.difficulty === difficulty)
+    if (pool.length === 0) throw new Error('No fallback LeetCode problems for that difficulty')
+    return { ...pickRandom(pool), fallback: true }
   }
 }
 
