@@ -5,7 +5,7 @@
 
 import { io } from 'socket.io-client'
 
-const SERVER_URL = 'http://localhost:5000'
+const SERVER_URL = 'https://cp-battle-zwoh.onrender.com'
 
 // autoConnect: false means the socket won't connect until we call socket.connect()
 // This gives us control over when the connection opens
