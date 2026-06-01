@@ -2,30 +2,47 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
+import ScreenshotModal from '../components/ScreenshotModal'
 
 function BattleScreen({ state, actions }) {
-  const { username, problem, players, isHost } = state
+  const { username, problem, players, isHost, timeLimit } = state
   const { setPlayers, setLeaderboard } = actions
 
-  const navigate  = useNavigate()
-  const [timer,    setTimer]    = useState(0)
-  const [solved,   setSolved]   = useState(false)
+  const navigate   = useNavigate()
+  const [timer,     setTimer]     = useState(0)
+  const [solved,    setSolved]    = useState(false)
   const [countdown, setCountdown] = useState(null)
+  const [solvedAt,  setSolvedAt]  = useState(null)
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false)
 
-  // ── Timer ──────────────────────────────────────────────────────────────────
+  // Timer: keeps counting up globally, but ends round if timeLimit reached
   useEffect(() => {
-    const interval = setInterval(() => setTimer(t => t + 1), 1000)
-    return () => clearInterval(interval)
-  }, [])
+    const isTimeLimitMode = !!timeLimit
+    const limitSeconds = isTimeLimitMode ? timeLimit * 60 : Infinity
 
-  // ── Countdown after first solve ────────────────────────────────────────────
+    const interval = setInterval(() => {
+      setTimer(t => {
+        const nextTime = t + 1
+        if (isTimeLimitMode && nextTime >= limitSeconds) {
+          clearInterval(interval)
+          if (isHost) {
+            socket.emit('end_round', { roomCode: state.roomCode })
+          }
+          return limitSeconds
+        }
+        return nextTime
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [timeLimit, isHost, state.roomCode])
+
+  // Countdown after first solve (only used if no time limit is set)
   useEffect(() => {
     if (countdown === null || countdown <= 0) return
     const interval = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          // Time's up — host emits end_round (or everyone's client can,
-          // but only the host should to avoid duplicate events)
           if (isHost) socket.emit('end_round', { roomCode: state.roomCode })
           return 0
         }
@@ -33,27 +50,16 @@ function BattleScreen({ state, actions }) {
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [countdown])
+  }, [countdown, isHost, state.roomCode])
 
-  // ── Socket listeners ───────────────────────────────────────────────────────
+  // Socket listeners
   useEffect(() => {
-    // Someone solved — update player list for everyone
-    socket.on('players_update', ({ players }) => {
-      setPlayers(players)
-    })
-
-    // First solve happened — start the countdown
-    socket.on('first_solve', ({ username: solver, countdown }) => {
-      setCountdown(countdown)
-    })
-
-    // Round ended — go to results
+    socket.on('players_update', ({ players }) => setPlayers(players))
+    socket.on('first_solve', ({ countdown }) => setCountdown(countdown))
     socket.on('round_ended', ({ leaderboard }) => {
       setLeaderboard(leaderboard)
       navigate('/result')
     })
-
-    // Host left mid-battle
     socket.on('room_closed', ({ message }) => {
       alert(message)
       navigate('/')
@@ -67,10 +73,30 @@ function BattleScreen({ state, actions }) {
     }
   }, [])
 
-  function handleSolvedIt() {
+  // Trap browser back button
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href)
+    const handlePopState = () => window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  // When user clicks "I Solved It", show the screenshot modal
+  function handleSolvedClick() {
     if (solved) return
+    setShowScreenshotModal(true)
+  }
+
+  // Submit solve with optional screenshot proof
+  function submitSolve(screenshotData) {
     setSolved(true)
-    socket.emit('player_solved', { roomCode: state.roomCode, username })
+    setSolvedAt(timer)
+    setShowScreenshotModal(false)
+    socket.emit('player_solved', {
+      roomCode: state.roomCode,
+      username,
+      screenshotData: screenshotData || null,
+    })
   }
 
   function handleEndRound() {
@@ -82,59 +108,136 @@ function BattleScreen({ state, actions }) {
     return `${m}:${(s % 60).toString().padStart(2, '0')}`
   }
 
+  function getCountdownColor(cd) {
+    const ratio = cd / 30
+    const hue = ratio > 0.5 ? 120 - ((1 - ratio) * 2 * 60) : (ratio * 2) * 60
+    return `hsl(${hue}, 85%, 55%)`
+  }
+
+  function getPlatClass(p) {
+    if (!p) return ''
+    if (p.includes('LeetCode'))   return 'plat-lc'
+    if (p.includes('Codeforces')) return 'plat-cf'
+    return 'plat-gfg'
+  }
+
   return (
     <div className="screen">
-      <h1>⚔️ Battle!</h1>
+      <div className="page-title">
+        <span className="icon">⚔️</span> Battle!
+      </div>
 
+      {/* Problem */}
       <div className="card">
-        <p className="label">YOUR PROBLEM</p>
-        <p className="problem-title">{problem?.title}</p>
-        <p className="problem-meta">{problem?.platform} · {problem?.difficulty}</p>
-        <a href={problem?.link} target="_blank" rel="noreferrer" className="problem-link">
-          Open Problem ↗
-        </a>
+        <span className="label">YOUR PROBLEM</span>
+        <div className="problem-box">
+          <p className="problem-name">{problem?.title}</p>
+          <div className="problem-meta">
+            <span className={getPlatClass(problem?.platform)}>{problem?.platform}</span>
+            <span>·</span>
+            <span>{problem?.difficulty}</span>
+          </div>
+          <a href={problem?.link} target="_blank" rel="noreferrer" className="problem-link">
+            Open Problem ↗
+          </a>
+        </div>
       </div>
 
-      <div className="card timer-card">
-        <p className="label">TIME ELAPSED</p>
-        <p className="timer">{formatTime(timer)}</p>
+      {/* Timer */}
+      <div className="card" style={{ textAlign: 'center' }}>
+        {timeLimit ? (
+          <>
+            <span className="label">TIME REMAINING</span>
+            <div className={`timer-display ${solved ? 'done' : 'running'}`} style={{ color: 'var(--amber-400)' }}>
+              {formatTime(Math.max(0, timeLimit * 60 - timer))}
+            </div>
+            <div className="progress-bar-container" style={{
+              background: 'var(--slate-800)',
+              borderRadius: '999px',
+              height: '8px',
+              width: '100%',
+              marginTop: '12px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                background: 'linear-gradient(90deg, var(--cyan-400), var(--purple-500))',
+                height: '100%',
+                width: `${Math.min(100, (timer / (timeLimit * 60)) * 100)}%`,
+                transition: 'width 1s linear'
+              }} />
+            </div>
+            {solved ? (
+              <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>
+                ✅ Submitted in {formatTime(solvedAt)}! Remaining players still have time.
+              </p>
+            ) : (
+              <p className="hint" style={{ marginTop: '8px' }}>
+                Solve before time runs out!
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="label">{solved ? 'YOUR TIME' : 'TIME ELAPSED'}</span>
+            <div className={`timer-display ${solved ? 'done' : 'running'}`}>
+              {formatTime(solved ? solvedAt : timer)}
+            </div>
+            {solved && <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>✅ Submitted!</p>}
+          </>
+        )}
       </div>
 
+      {/* Countdown */}
       {countdown !== null && countdown > 0 && (
-        <div className="card" style={{ textAlign: 'center', borderColor: '#f59e0b' }}>
-          <p style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.1rem' }}>
+        <div className="countdown-bar" style={{ borderColor: getCountdownColor(countdown) }}>
+          <p className={`countdown-num ${countdown <= 10 ? 'urgent' : ''}`}
+             style={{ color: getCountdownColor(countdown) }}>
             ⏳ Round ends in {countdown}s
           </p>
-          <p className="hint">First blood claimed! Others can still score points.</p>
+          <p className="hint">
+            {countdown <= 10 ? '🔥 Hurry up!' : 'First blood! Others can still score.'}
+          </p>
         </div>
       )}
 
+      {/* Player statuses */}
       <div className="card">
-        <p className="label">PLAYERS</p>
+        <span className="label">PLAYERS</span>
         {players.map(p => (
           <div key={p.id} className="player-row">
-            <span>{p.name} {p.name === username && '(You)'}</span>
-            <span className={p.status.includes('Solved') ? 'status-solved' : 'status-solving'}>
+            <span style={{ fontWeight: 500 }}>
+              {p.name} {p.name === username && <span style={{ color: 'var(--blue-400)', fontSize: '0.8rem' }}>(You)</span>}
+            </span>
+            <span className={`solve-status ${p.status.includes('Solved') ? 'solved' : 'solving'}`}>
               {p.status}
             </span>
           </div>
         ))}
       </div>
 
+      {/* Solve button or waiting message */}
       {!solved ? (
-        <button className="btn-primary btn-big" onClick={handleSolvedIt}>
+        <button className="btn btn-success btn-lg" onClick={handleSolvedClick}>
           ✅ I Solved It!
         </button>
       ) : (
         <div className="card" style={{ textAlign: 'center' }}>
-          <p>🎉 Nice! Waiting for others...</p>
+          <p className="card-desc">🎉 Nice work! Waiting for others...</p>
         </div>
       )}
 
       {isHost && (
-        <button className="btn-secondary" onClick={handleEndRound}>
+        <button className="btn btn-secondary" onClick={handleEndRound}>
           End Round Early
         </button>
+      )}
+
+      {/* Screenshot upload modal */}
+      {showScreenshotModal && (
+        <ScreenshotModal
+          onSubmit={(data) => submitSolve(data)}
+          onSkip={() => submitSolve(null)}
+        />
       )}
     </div>
   )
