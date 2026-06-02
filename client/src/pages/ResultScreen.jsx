@@ -71,7 +71,7 @@ function ResultScreen({ state, actions }) {
         onClick={handleLeaveRoom}
         title="Leave Room"
       >
-        🚪 Leave Room
+        Leave Room
       </button>
 
       <div className="page-title">

@@ -230,7 +230,7 @@ io.on('connection', (socket) => {
   })
 
   // ── PLAYER SOLVED ───────────────────────────────────────────────────────────
-  socket.on('player_solved', ({ roomCode, username, screenshotData }) => {
+  socket.on('player_solved', ({ roomCode, username, screenshotData, gaveUp }) => {
     const room = rooms.get(roomCode)
     if (!room) return
 
@@ -243,7 +243,7 @@ io.on('connection', (socket) => {
 
     room.players = room.players.map(p =>
       p.name === username
-        ? { ...p, status: `Solved ✅ (+${earned}pts)`, points: p.points + earned, screenshotData: screenshotData || null }
+        ? { ...p, status: gaveUp ? 'Skipped ⏭️' : `Solved ✅ (+${earned}pts)`, points: p.points + earned, screenshotData: screenshotData || null }
         : p
     )
 
@@ -251,6 +251,17 @@ io.on('connection', (socket) => {
 
     if (solvedCount === 0 && !room.timeLimit) {
       io.to(roomCode).emit('first_solve', { username, countdown: 30 })
+    }
+
+    const allDone = room.players.every(p =>
+      p.status.startsWith('Solved') || p.status.startsWith('Skipped')
+    )
+    if (allDone) {
+      const leaderboard = [...room.players]
+        .sort((a, b) => b.points - a.points)
+        .map((p, i) => ({ ...p, rank: i + 1 }))
+      io.to(roomCode).emit('round_ended', { leaderboard })
+      console.log(`Room ${roomCode}: all players done — auto ending round`)
     }
 
     console.log(`${username} solved in room ${roomCode}, earned ${earned} pts`)
