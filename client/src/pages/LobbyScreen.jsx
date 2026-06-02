@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
 
-const API_BASE = 'http://localhost:5000'
+const API_BASE = 'https://cp-battle-1.onrender.com'
 
 // Detect platform from URL
 function detectPlatform(url) {
