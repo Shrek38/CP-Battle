@@ -704,3 +704,37 @@ a { color:inherit; text-decoration:none; }
   .section { padding:60px 16px; }
   .section-title { font-size:1.6rem; }
 }
+
+.exit-room-btn {
+  position: absolute;
+  top: 40px;
+  right: 20px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--red-400);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s var(--ease);
+}
+.exit-room-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--red-500);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+@media(max-width: 480px) {
+  .exit-room-btn {
+    top: 24px;
+    right: 16px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+}

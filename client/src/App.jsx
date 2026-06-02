@@ -65,7 +65,27 @@ function App() {
       setSocketConnected(false)
     })
 
-    return () => { socket.disconnect() }
+    // Central room updates to keep state dynamically synchronized across all screens
+    socket.on('room_update', ({ players, problem, hostId, hostName, timeLimit, maxPlayers }) => {
+      if (players) setPlayers(players)
+      if (problem) setProblem(problem)
+      if (hostName) setHostName(hostName)
+      if (hostId) {
+        setIsHost(socket.id === hostId)
+      }
+      if (timeLimit !== undefined) setTimeLimit(timeLimit)
+      if (maxPlayers !== undefined) setMaxPlayers(maxPlayers)
+    })
+
+    socket.on('players_update', ({ players }) => {
+      if (players) setPlayers(players)
+    })
+
+    return () => { 
+      socket.disconnect() 
+      socket.off('room_update')
+      socket.off('players_update')
+    }
   }, [])
 
   // ── Bundle state/actions for screens ────────────────────────────────────

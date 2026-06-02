@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
 
-const API_BASE = 'https://cp-battle-1.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function HomeScreen({ state, actions }) {
   const { username, socketConnected } = state

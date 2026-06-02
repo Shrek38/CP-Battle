@@ -14,6 +14,7 @@ function BattleScreen({ state, actions }) {
   const [countdown, setCountdown] = useState(null)
   const [solvedAt,  setSolvedAt]  = useState(null)
   const [showScreenshotModal, setShowScreenshotModal] = useState(false)
+  const [gaveUp, setGaveUp] = useState(false)
 
   // Timer: keeps counting up globally, but ends round if timeLimit reached
   useEffect(() => {
@@ -81,6 +82,28 @@ function BattleScreen({ state, actions }) {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
+  // Leave room handler
+  function handleLeaveRoom() {
+    if (confirm('Are you sure you want to leave the room? The battle is active.')) {
+      socket.emit('leave_room', { roomCode: state.roomCode })
+      actions.setRoomCode('')
+      actions.setIsHost(false)
+      actions.setHostName('')
+      actions.setPlayers([])
+      actions.setProblem(null)
+      navigate('/')
+    }
+  }
+
+  // Give up handler
+  function handleGiveUp() {
+    if (confirm('Are you sure you want to give up? You will score 0 points this round.')) {
+      setGaveUp(true)
+      setSolved(true)
+      socket.emit('player_gave_up', { roomCode: state.roomCode, username })
+    }
+  }
+
   // When user clicks "I Solved It", show the screenshot modal
   function handleSolvedClick() {
     if (solved) return
@@ -123,6 +146,14 @@ function BattleScreen({ state, actions }) {
 
   return (
     <div className="screen">
+      <button 
+        className="exit-room-btn" 
+        onClick={handleLeaveRoom}
+        title="Leave Room"
+      >
+        🚪 Leave Room
+      </button>
+
       <div className="page-title">
         <span className="icon">⚔️</span> Battle!
       </div>
@@ -167,9 +198,15 @@ function BattleScreen({ state, actions }) {
               }} />
             </div>
             {solved ? (
-              <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>
-                ✅ Submitted in {formatTime(solvedAt)}! Remaining players still have time.
-              </p>
+              gaveUp ? (
+                <p style={{ color: 'var(--red-400)', fontWeight: 600, marginTop: '8px' }}>
+                  ❌ You gave up. Remaining players still have time.
+                </p>
+              ) : (
+                <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>
+                  ✅ Submitted in {formatTime(solvedAt)}! Remaining players still have time.
+                </p>
+              )
             ) : (
               <p className="hint" style={{ marginTop: '8px' }}>
                 Solve before time runs out!
@@ -182,7 +219,13 @@ function BattleScreen({ state, actions }) {
             <div className={`timer-display ${solved ? 'done' : 'running'}`}>
               {formatTime(solved ? solvedAt : timer)}
             </div>
-            {solved && <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>✅ Submitted!</p>}
+            {solved && (
+              gaveUp ? (
+                <p style={{ color: 'var(--red-400)', fontWeight: 600, marginTop: '8px' }}>❌ Gave Up!</p>
+              ) : (
+                <p style={{ color: 'var(--green-400)', fontWeight: 600, marginTop: '8px' }}>✅ Submitted!</p>
+              )
+            )}
           </>
         )}
       </div>
@@ -208,7 +251,7 @@ function BattleScreen({ state, actions }) {
             <span style={{ fontWeight: 500 }}>
               {p.name} {p.name === username && <span style={{ color: 'var(--blue-400)', fontSize: '0.8rem' }}>(You)</span>}
             </span>
-            <span className={`solve-status ${p.status.includes('Solved') ? 'solved' : 'solving'}`}>
+            <span className={`solve-status ${p.status.includes('Solved') ? 'solved' : p.status.includes('Gave Up') ? 'gave-up' : 'solving'}`} style={{ color: p.status.includes('Gave Up') ? 'var(--red-400)' : undefined }}>
               {p.status}
             </span>
           </div>
@@ -217,17 +260,24 @@ function BattleScreen({ state, actions }) {
 
       {/* Solve button or waiting message */}
       {!solved ? (
-        <button className="btn btn-success btn-lg" onClick={handleSolvedClick}>
-          ✅ I Solved It!
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <button className="btn btn-success btn-lg" onClick={handleSolvedClick}>
+            ✅ I Solved It!
+          </button>
+          <button className="btn btn-danger" onClick={handleGiveUp}>
+            🏳️ Give Up
+          </button>
+        </div>
       ) : (
         <div className="card" style={{ textAlign: 'center' }}>
-          <p className="card-desc">🎉 Nice work! Waiting for others...</p>
+          <p className="card-desc">
+            {gaveUp ? '🏳️ You gave up this round. Waiting for others...' : '🎉 Nice work! Waiting for others...'}
+          </p>
         </div>
       )}
 
       {isHost && (
-        <button className="btn btn-secondary" onClick={handleEndRound}>
+        <button className="btn btn-secondary" onClick={handleEndRound} style={{ marginTop: '10px' }}>
           End Round Early
         </button>
       )}

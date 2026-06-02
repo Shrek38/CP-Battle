@@ -50,10 +50,30 @@ function ResultScreen({ state, actions }) {
     navigate('/')
   }
 
+  function handleLeaveRoom() {
+    if (confirm('Are you sure you want to leave the room?')) {
+      socket.emit('leave_room', { roomCode })
+      actions.setRoomCode('')
+      actions.setIsHost(false)
+      actions.setHostName('')
+      setPlayers([])
+      setLeaderboard([])
+      navigate('/')
+    }
+  }
+
   const winner = leaderboard.length > 0 ? leaderboard[0] : null
 
   return (
     <div className="screen">
+      <button 
+        className="exit-room-btn" 
+        onClick={handleLeaveRoom}
+        title="Leave Room"
+      >
+        🚪 Leave Room
+      </button>
+
       <div className="page-title">
         <span className="icon">🏆</span> Results
       </div>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
 
-const API_BASE = 'https://cp-battle-1.onrender.com'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // Detect platform from URL
 function detectPlatform(url) {
@@ -147,6 +147,18 @@ function LobbyScreen({ state, actions }) {
     socket.emit('toggle_ready', { roomCode })
   }
 
+  function handleLeaveRoom() {
+    if (confirm('Are you sure you want to leave the room?')) {
+      socket.emit('leave_room', { roomCode })
+      actions.setRoomCode('')
+      actions.setIsHost(false)
+      actions.setHostName('')
+      actions.setPlayers([])
+      actions.setProblem(null)
+      navigate('/')
+    }
+  }
+  
   function getDiffClass(d) {
     if (!d) return ''
     const dl = d.toLowerCase()
@@ -177,6 +189,14 @@ function LobbyScreen({ state, actions }) {
 
   return (
     <div className="screen">
+      <button 
+        className="exit-room-btn" 
+        onClick={handleLeaveRoom}
+        title="Leave Room"
+      >
+        Exit 
+      </button>
+
       <div className="page-title">
         <span className="icon">⚔️</span> Battle Lobby
       </div>
