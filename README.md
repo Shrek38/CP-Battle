@@ -1,12 +1,12 @@
-# ⚔️ CP Battle
+# CP Battle
 
-A real-time **competitive programming battle platform** where developers race head-to-head to solve coding problems from LeetCode, Codeforces, and GeeksforGeeks — live, in the same room.
+A real-time competitive programming battle platform where developers race head-to-head to solve coding problems from LeetCode, Codeforces, and GeeksforGeeks — live, in the same room.
 
-🌐 **Live Demo:** [cp-battle.vercel.app](https://cp-battle.vercel.app)
+**Live Demo:** [cp-battle.vercel.app](https://cp-battle.vercel.app)
 
 ---
 
-## 📸 Preview
+## Preview
 
 | Home | Lobby | Battle |
 |------|-------|--------|
@@ -14,25 +14,22 @@ A real-time **competitive programming battle platform** where developers race he
 
 ---
 
-## ✨ Features
+## Features
 
-- 🏠 **Room System** — Create or join battle rooms with a 6-character room code
-- ⚡ **Real-time Sync** — All players see live updates via WebSockets (Socket.io)
-- 🎯 **Multi-platform Problems** — Fetch random problems from:
-  - **LeetCode** (Easy / Medium / Hard)
-  - **Codeforces** (by rating range: 800–3500)
-  - **GeeksforGeeks** (Easy / Medium / Hard)
-- 🔗 **Custom URL** — Paste any LeetCode/Codeforces/GFG problem link directly
-- 🏆 **Points & Leaderboard** — First to solve earns 3pts, second 2pts, third 1pt
-- 📸 **Screenshot Proof** — Players upload a screenshot of their accepted solution
-- ⏱️ **Time Limit** — Optional countdown timer per round
-- 👥 **Max Players** — Host can cap the number of participants
-- 🔄 **Multi-round** — Play multiple rounds in the same room with cumulative scores
-- 🔁 **Rejoin Support** — Accidentally closed the tab? Rejoin your active room
+- **Room System** — Create or join battle rooms with a 6-character room code
+- **Real-time Sync** — All players see live updates via WebSockets (Socket.io)
+- **Multi-platform Problems** — Fetch random problems from LeetCode (Easy/Medium/Hard), Codeforces (by rating), and GeeksforGeeks
+- **Custom URL** — Paste any LeetCode, Codeforces, or GFG problem link directly
+- **Points & Leaderboard** — First to solve earns 3pts, second 2pts, third 1pt
+- **Screenshot Proof** — Players upload a screenshot of their accepted submission
+- **Time Limit** — Optional countdown timer per round
+- **Max Players** — Host can cap the number of participants
+- **Multi-round** — Play multiple rounds in the same room with cumulative scores
+- **Rejoin Support** — Accidentally closed the tab? Rejoin your active room
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -44,7 +41,7 @@ A real-time **competitive programming battle platform** where developers race he
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 CP-Battle/
@@ -73,7 +70,7 @@ CP-Battle/
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -102,38 +99,32 @@ npm install
 npm run dev       # runs on http://localhost:5173
 ```
 
-> Make sure `client/src/pages/HomeScreen.jsx` and `LobbyScreen.jsx` have `API_BASE = 'http://localhost:5000'` for local development.
+Create a `client/.env.local` file for local development:
+```
+VITE_API_BASE=http://localhost:5000
+```
 
 ---
 
-## 🌐 Deployment
+## Deployment
 
 | Service | Purpose | URL |
 |---|---|---|
 | Vercel | Frontend hosting | [cp-battle.vercel.app](https://cp-battle.vercel.app) |
-| Render | Backend + WebSocket server | `https://cp-battle-1.onrender.com` |
+| Render | Backend + WebSocket server | https://cp-battle-1.onrender.com |
 | UptimeRobot | Keep Render alive (free tier) | Pings `/health` every 5 min |
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### `GET /api/problem/random`
 
 Fetches a random problem based on platform and difficulty.
 
-**LeetCode:**
 ```
 GET /api/problem/random?platform=LeetCode&difficulty=Easy
-```
-
-**Codeforces:**
-```
 GET /api/problem/random?platform=Codeforces&minRating=1000&maxRating=1400
-```
-
-**GeeksforGeeks:**
-```
 GET /api/problem/random?platform=GeeksforGeeks&difficulty=Medium
 ```
 
@@ -142,7 +133,7 @@ Returns server status. Used by UptimeRobot to keep the server alive.
 
 ---
 
-## 🔁 Socket Events
+## Socket Events
 
 | Event | Direction | Description |
 |---|---|---|
@@ -161,12 +152,6 @@ Returns server status. Used by UptimeRobot to keep the server alive.
 
 ---
 
-## 🤝 Contributing
-
-Pull requests are welcome! For major changes, open an issue first to discuss what you'd like to change.
-
----
-
-## 📄 License
+## License
 
 MIT
