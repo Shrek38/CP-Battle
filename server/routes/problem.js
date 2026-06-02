@@ -97,7 +97,13 @@ async function getLeetCodeProblem(difficulty) {
 
     if (!response.ok) throw new Error(`LeetCode API returned ${response.status}`)
 
-    const data = await response.json()
+    const text = await response.text()
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error('LeetCode API returned invalid response')
+    }
     const problems = data.problemsetQuestionList
 
     if (!problems || problems.length === 0) throw new Error('LeetCode API returned no problems')

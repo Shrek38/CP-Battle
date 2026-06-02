@@ -83,6 +83,38 @@ function broadcastRoom(roomCode) {
   })
 }
 
+// ── Helper: handle player leaving a room (with host transfer) ────────────────
+function handlePlayerLeave(socket, roomCode) {
+  const room = rooms.get(roomCode)
+  if (!room) return
+
+  const leavingPlayer = room.players.find(p => p.id === socket.id)
+  if (!leavingPlayer) return
+
+  // Remove the player from players list
+  room.players = room.players.filter(p => p.id !== socket.id)
+  console.log(`Player ${leavingPlayer.name} left room ${roomCode}`)
+
+  // If no players are left, delete the room
+  if (room.players.length === 0) {
+    rooms.delete(roomCode)
+    console.log(`Room ${roomCode} deleted — all players left`)
+    return
+  }
+
+  // If the leaving player was the host, transfer host status to the first remaining player
+  if (room.hostId === socket.id) {
+    const newHost = room.players[0]
+    room.hostId = newHost.id
+    room.hostName = newHost.name
+    newHost.ready = true // Host is always ready
+    console.log(`Host shifted in room ${roomCode}: ${newHost.name} is the new host`)
+  }
+
+  // Broadcast updated room state
+  broadcastRoom(roomCode)
+}
+
 // ── Socket.io event handlers ──────────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`)
@@ -157,6 +189,12 @@ io.on('connection', (socket) => {
     console.log(`${player.name} toggled ready to ${player.ready} in room ${roomCode}`)
   })
 
+  // ── LEAVE ROOM ──────────────────────────────────────────────────────────────
+  socket.on('leave_room', ({ roomCode }) => {
+    handlePlayerLeave(socket, roomCode)
+    socket.leave(roomCode)
+  })
+
   // ── UPDATE CONFIG ───────────────────────────────────────────────────────────
   socket.on('update_config', ({ roomCode, timeLimit, maxPlayers }) => {
     const room = rooms.get(roomCode)
@@ -218,6 +256,36 @@ io.on('connection', (socket) => {
     console.log(`${username} solved in room ${roomCode}, earned ${earned} pts`)
   })
 
+  // ── PLAYER GAVE UP ──────────────────────────────────────────────────────────
+  socket.on('player_gave_up', ({ roomCode, username }) => {
+    const room = rooms.get(roomCode)
+    if (!room) return
+
+    room.players = room.players.map(p =>
+      p.name === username
+        ? { ...p, status: 'Gave Up ❌' }
+        : p
+    )
+
+    io.to(roomCode).emit('players_update', { players: room.players })
+    console.log(`${username} gave up in room ${roomCode}`)
+
+    // Check if everyone is finished (either Solved or Gave Up)
+    const activePlayers = room.players.filter(p => 
+      !p.status.startsWith('Solved') && p.status !== 'Gave Up ❌'
+    )
+
+    if (activePlayers.length === 0) {
+      // Auto-end the round
+      const leaderboard = [...room.players]
+        .sort((a, b) => b.points - a.points)
+        .map((p, i) => ({ ...p, rank: i + 1 }))
+
+      io.to(roomCode).emit('round_ended', { leaderboard })
+      console.log(`Round ended automatically in room ${roomCode} (all players solved or gave up)`)
+    }
+  })
+
   // ── END ROUND ───────────────────────────────────────────────────────────────
   socket.on('end_round', ({ roomCode }) => {
     const room = rooms.get(roomCode)
@@ -251,21 +319,10 @@ io.on('connection', (socket) => {
 
     for (const [roomCode, room] of rooms) {
       const wasInRoom = room.players.find(p => p.id === socket.id)
-      if (!wasInRoom) continue
-
-      if (room.hostId === socket.id) {
-        io.to(roomCode).emit('room_closed', {
-          message: 'Host disconnected — room closed'
-        })
-        rooms.delete(roomCode)
-        console.log(`Room ${roomCode} closed — host left`)
-      } else {
-        room.players = room.players.filter(p => p.id !== socket.id)
-        broadcastRoom(roomCode)
-        console.log(`${wasInRoom.name} left room ${roomCode}`)
+      if (wasInRoom) {
+        handlePlayerLeave(socket, roomCode)
+        break
       }
-
-      break
     }
   })
 })
