@@ -65,6 +65,15 @@ function LobbyScreen({ state, actions }) {
       if (problem) setProblem(problem)
       if (tl !== undefined) actions.setTimeLimit(tl)
       if (mp !== undefined) actions.setMaxPlayers(mp)
+
+      // Double-check host privilege updates using username and socket ID comparisons
+      const userMatches = username && hostName && username.toLowerCase() === hostName.toLowerCase()
+      const socketMatches = socket.id && hid && socket.id === hid
+      if (userMatches || socketMatches) {
+        actions.setIsHost(true)
+      } else {
+        actions.setIsHost(false)
+      }
     })
 
     socket.on('battle_started', ({ problem, players }) => {
@@ -83,7 +92,7 @@ function LobbyScreen({ state, actions }) {
       socket.off('battle_started')
       socket.off('room_closed')
     }
-  }, [])
+  }, [username, actions, navigate])
 
   async function handleFetchRandom() {
     setLoading(true)

@@ -2,7 +2,7 @@
 // Modal to upload screenshot proof of accepted submission
 import { useState } from 'react'
 
-export default function ScreenshotModal({ onSubmit, onSkip }) {
+export default function ScreenshotModal({ onSubmit, onSkip, onClose }) {
   const [preview, setPreview] = useState(null)
   const [fileData, setFileData] = useState(null)
 
@@ -29,9 +29,9 @@ export default function ScreenshotModal({ onSubmit, onSkip }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onSkip}>
+    <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onSkip} title="Close">✕</button>
+        <button className="modal-close" onClick={onClose} title="Close">✕</button>
         <h3>📸 Upload Proof</h3>
         <p className="card-desc">
           Upload a screenshot of your accepted submission to prove you solved it. 

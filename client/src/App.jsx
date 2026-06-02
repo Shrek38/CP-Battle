@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { socket } from './socket'
 
@@ -20,6 +20,12 @@ function App() {
   const [leaderboard, setLeaderboard]       = useState([])
   const [timeLimit, setTimeLimit]           = useState(null)
   const [maxPlayers, setMaxPlayers]         = useState(null)
+
+  // Stable ref for username to prevent WebSocket stale closures
+  const usernameRef = useRef(username)
+  useEffect(() => {
+    usernameRef.current = username
+  }, [username])
 
   // ── Persist username in localStorage ────────────────────────────────────
   useEffect(() => {
@@ -67,12 +73,21 @@ function App() {
 
     // Central room updates to keep state dynamically synchronized across all screens
     socket.on('room_update', ({ players, problem, hostId, hostName, timeLimit, maxPlayers }) => {
+      console.log('[App] room_update received:', { hostId, hostName, socketId: socket.id, localUser: usernameRef.current })
       if (players) setPlayers(players)
       if (problem) setProblem(problem)
       if (hostName) setHostName(hostName)
-      if (hostId) {
-        setIsHost(socket.id === hostId)
+      
+      const userMatches = usernameRef.current && hostName && usernameRef.current.toLowerCase() === hostName.toLowerCase()
+      const socketMatches = socket.id && hostId && socket.id === hostId
+      
+      if (userMatches || socketMatches) {
+        console.log('[App] I am the new host!')
+        setIsHost(true)
+      } else {
+        setIsHost(false)
       }
+
       if (timeLimit !== undefined) setTimeLimit(timeLimit)
       if (maxPlayers !== undefined) setMaxPlayers(maxPlayers)
     })

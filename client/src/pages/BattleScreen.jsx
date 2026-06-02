@@ -151,7 +151,7 @@ function BattleScreen({ state, actions }) {
         onClick={handleLeaveRoom}
         title="Leave Room"
       >
-        🚪 Leave Room
+        Exit
       </button>
 
       <div className="page-title">
@@ -261,11 +261,15 @@ function BattleScreen({ state, actions }) {
       {/* Solve button or waiting message */}
       {!solved ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button className="btn btn-success btn-lg" onClick={handleSolvedClick}>
-            ✅ I Solved It!
+          <button className="btn btn-success btn-lg" onClick={handleSolvedClick} 
+            style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: 'var(--green-400)' }}
+          >
+            🎯 Solved It!
           </button>
-          <button className="btn btn-danger" onClick={handleGiveUp}>
-            🏳️ Give Up
+          <button className="btn btn-danger" onClick={handleGiveUp}
+            style={{ background: 'rgba(248, 71, 17, 0.3)', border: '1px solid rgba(184, 100, 97, 0.56)', color: 'var(--slate-400)', fontSize: '0.95rem' }}
+          >
+            ⏭️ Pass
           </button>
         </div>
       ) : (
@@ -287,6 +291,7 @@ function BattleScreen({ state, actions }) {
         <ScreenshotModal
           onSubmit={(data) => submitSolve(data)}
           onSkip={() => submitSolve(null)}
+          onClose={() => setShowScreenshotModal(false)}
         />
       )}
     </div>
