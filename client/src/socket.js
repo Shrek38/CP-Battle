@@ -1,8 +1,3 @@
-// client/src/socket.js
-// We create ONE socket instance and import it wherever needed.
-// If you created a new socket inside each component, you'd get
-// multiple connections and duplicate events.
-
 import { io } from 'socket.io-client'
 
 const SERVER_URL = 'https://cp-battle-1.onrender.com'

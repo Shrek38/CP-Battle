@@ -1,5 +1,3 @@
-// server/index.js
-
 const express = require('express')
 const cors    = require('cors')
 const http    = require('http')
@@ -52,19 +50,6 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err.message)
   res.status(500).json({ error: 'Internal server error' })
 })
-
-// ── In-memory room store ──────────────────────────────────────────────────────
-// rooms is a Map: roomCode → roomData object
-//
-// roomData shape:
-// {
-//   code:     'XYZ123',
-//   hostId:   socket.id,
-//   hostName: 'alice',
-//   players:  [{ id, name, points, status, ready, screenshotData }],
-//   problem:  { title, link, difficulty, platform },
-//   locked:   false,
-// }
 
 const rooms = new Map()
 
@@ -267,7 +252,7 @@ io.on('connection', (socket) => {
     console.log(`${username} solved in room ${roomCode}, earned ${earned} pts`)
   })
 
-  // ── PLAYER GAVE UP ──────────────────────────────────────────────────────────
+  // ── PLAYER PASSED ──────────────────────────────────────────────────────────
   socket.on('player_gave_up', ({ roomCode, username }) => {
     const room = rooms.get(roomCode)
     if (!room) return
@@ -281,7 +266,7 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('players_update', { players: room.players })
     console.log(`${username} gave up in room ${roomCode}`)
 
-    // Check if everyone is finished (either Solved or Gave Up)
+    // Check if everyone has finished (either Solved or Gave Up)
     const activePlayers = room.players.filter(p => 
       !p.status.startsWith('Solved') && p.status !== 'Gave Up ❌'
     )

@@ -1,4 +1,3 @@
-// pages/HomeScreen.jsx — Full scrollable landing page
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'

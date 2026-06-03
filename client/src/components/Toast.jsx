@@ -1,4 +1,3 @@
-// components/Toast.jsx
 // Lightweight toast notification system
 import { useState, useEffect, useCallback } from 'react'
 

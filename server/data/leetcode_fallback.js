@@ -1,7 +1,4 @@
-// server/data/leetcode_fallback.js
-// Curated set of popular LeetCode problems used when the LeetCode API is
-// unreachable or too slow.  Grouped by difficulty for easy filtering.
-
+// Static LeetCode problem bank — used as fallback when the live API is unavailable or too slow
 const LC_FALLBACK = [
   // ── Easy ──────────────────────────────────────────────────────────────────
   { title: 'Two Sum',                       link: 'https://leetcode.com/problems/two-sum',                        difficulty: 'Easy',   platform: 'LeetCode' },

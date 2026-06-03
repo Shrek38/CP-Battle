@@ -1,8 +1,4 @@
-// server/data/gfg_problems.js
-// Hardcoded fallback problems for GeeksforGeeks
-// (GFG has no clean public API)
-// Add more problems here over time
-
+// Static GeeksforGeeks problem bank — used as fallback when the live API is unavailable or too slow
 const GFG_PROBLEMS = [
   {
     title: 'Reverse a Linked List',

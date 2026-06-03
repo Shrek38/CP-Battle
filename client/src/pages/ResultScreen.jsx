@@ -1,4 +1,4 @@
-// pages/ResultScreen.jsx
+// Displays the leaderboard and proof screenshots after a round ends — host can start next round or end session
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'

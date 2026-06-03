@@ -1,4 +1,3 @@
-// pages/BattleScreen.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
@@ -100,6 +99,7 @@ function BattleScreen({ state, actions }) {
     if (confirm('Are you sure you want to give up? You will score 0 points this round.')) {
       setGaveUp(true)
       setSolved(true)
+      setSolvedAt(timer)
       socket.emit('player_gave_up', { roomCode: state.roomCode, username })
     }
   }

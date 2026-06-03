@@ -1,4 +1,3 @@
-// components/ScreenshotModal.jsx
 // Modal to upload screenshot proof of accepted submission
 import { useState } from 'react'
 

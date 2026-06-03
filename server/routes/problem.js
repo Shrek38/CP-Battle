@@ -1,6 +1,4 @@
-// server/routes/problem.js
-// Fetches real problems from Codeforces and LeetCode APIs.
-// Falls back to hardcoded data for GeeksforGeeks.
+// Fetches real problems from Codeforces and LeetCode APIs
 
 const express  = require('express')
 const router   = express.Router()
@@ -11,7 +9,6 @@ const LC_FALLBACK = require('../data/leetcode_fallback')
 // ── In-memory cache ───────────────────────────────────────────────────────────
 // Codeforces returns ~9000 problems in one big response (~2MB).
 // We cache it so we only fetch it ONCE per server restart, not on every request.
-// On Day 12 you could move this to MongoDB/Redis for persistence across restarts.
 
 const cache = {
   codeforces: null,          // will hold the full problems array

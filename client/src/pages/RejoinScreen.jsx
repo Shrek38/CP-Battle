@@ -1,9 +1,4 @@
-// pages/RejoinScreen.jsx
-// Shown when we detect the user had an active session but refreshed.
-// We can't truly rejoin a Socket.io room after a full refresh
-// (the old socket ID is gone from the server).
-// The honest UX is to tell them what happened and send them home.
-
+// Shown when a page refresh is detected mid-session — cleans up stale state and sends user back to home
 import { useNavigate } from 'react-router-dom'
 
 function RejoinScreen({ actions }) {
