@@ -14,7 +14,7 @@ A real-time **competitive programming battle platform** where developers race he
 
 ---
 
-## ✨ Features
+## Features
 
 - **Room System** — Create or join battle rooms with a 6-character room code
 - **Real-time Sync** — All players see live updates via WebSockets (Socket.io)
@@ -32,7 +32,7 @@ A real-time **competitive programming battle platform** where developers race he
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -73,7 +73,7 @@ CP-Battle/
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## Getting Started (Local Development)
 
 ### Prerequisites
 - Node.js 18+
@@ -161,12 +161,12 @@ Returns server status. Used by UptimeRobot to keep the server alive.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Pull requests are welcome! For major changes, open an issue first to discuss what you'd like to change.
 
 ---
 
-## 📄 License
+## License
 
 MIT
